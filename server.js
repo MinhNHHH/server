@@ -1,6 +1,6 @@
 const { WebSocket, WebSocketServer } = require('ws');
 
-const wsServer = new WebSocketServer({ port: 8000 });
+const wsServer = new WebSocketServer({ port: 60 });
 const list_room = [];
 function update_dic(a, b) {
   console.log(b)
