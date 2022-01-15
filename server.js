@@ -1,5 +1,5 @@
 const { WebSocket, WebSocketServer } = require('ws');
-const PORT = porces.env.PORT || 3000;
+const PORT = process.env.PORT || 3000;
 const wsServer = new WebSocketServer({ port: PORT });
 const list_room = [];
 function update_dic(a, b) {
