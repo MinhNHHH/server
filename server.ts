@@ -1,31 +1,49 @@
-const { WebSocket, WebSocketServer } = require('ws');
-const PORT = process.env.PORT || 3000;
-const wsServer = new WebSocketServer({ port: PORT });
-const list_room = [];
-function update_dic(a, b) {
-  for (key in b) {
+// const { WebSocketServer } = require('ws');
+import { WebSocket } from 'ws'
+
+
+const PORT : number =  8000 || process.env.PORT
+const wsServer = new WebSocket.Server({ port: PORT });
+
+const list_room: Array<any>= [];
+
+
+function update_dic(a: any, b: any) {
+  for (let key in b) {
     a[key] = b[key]
   };
   return a;
 };
+
+interface Room {
+  room_id: string;
+  connections: Array<WebSocket>;
+  object_draw: Array<any>
+}
+
+interface message {
+  event: string;
+  message:  { object : any ;  id : string } 
+}
+
 class Room {
-  constructor(room_id) {
+  constructor(room_id : any) {
     this.room_id = room_id;
     this.connections = [];
     this.object_draw = [];
   }
 
-  addConnection(connection) {
+  addConnection(connection: WebSocket) {
     if (!this.connections.includes(connection)) {
       return this.connections.push(connection)
     }
   }
 
-  addObject(object) {
+  addObject(object: object) {
     return this.object_draw.push(object)
   }
 
-  handleMessage(message) {
+  handleMessage(message: message) {
     switch (message['event']) {
       case ("add-objects-exist"):
         let temporary = message['message']['object'];
@@ -56,7 +74,7 @@ class Room {
     };
   };
 
-  boardcastException(msg, connection) {
+  boardcastException(msg: message, connection: WebSocket) {
     this.connections.forEach(function (client) {
       if (client !== connection && client.readyState === WebSocket.OPEN) {
 
@@ -68,15 +86,15 @@ class Room {
     });
   };
 
-  handleDeleteConnection(connection) {
+  handleDeleteConnection(connection: any) {
     this.connections.splice(connection, 1)
   };
-};
+} ;
 
-wsServer.on('connection', (ws, request) => {
+wsServer.on('connection', (ws : WebSocket, request) => {
   // check room existed and create room and add connection
-  let room = list_room.find(r => r.room_id === request.url);
-  
+  let room : Room = list_room.find(r => r.room_id === request.url);
+
   if (!room) {
     room = new Room(request.url);
     list_room.push(room);
@@ -88,7 +106,7 @@ wsServer.on('connection', (ws, request) => {
     event: "connect",
     object_existed: room.object_draw
   }));
-  ws.on('message', (message) => {
+  ws.on('message', (message : Buffer) => {
     const msg = JSON.parse(message.toString('utf-8'));
     // handle message 
     room.handleMessage(msg);
