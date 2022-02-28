@@ -2,8 +2,7 @@
 import { WebSocket } from 'ws'
 
 
-// const PORT : any =  process.env.PORT || 8000
-const PORT : any =   8000
+const PORT : any =  process.env.PORT || 3000
 const wsServer = new WebSocket.Server({ port: PORT });
 
 const list_room: Array<any>= [];
