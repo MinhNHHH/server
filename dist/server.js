@@ -2,7 +2,8 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 // const { WebSocketServer } = require('ws');
 const ws_1 = require("ws");
-const PORT = 8000 || process.env.PORT;
+// const PORT : any =  process.env.PORT || 8000
+const PORT = 8000;
 const wsServer = new ws_1.WebSocket.Server({ port: PORT });
 const list_room = [];
 function update_dic(a, b) {
@@ -29,21 +30,21 @@ class Room {
     }
     handleMessage(message) {
         switch (message['event']) {
-            case ("add-objects-exist"):
+            case ("addObjectIntoDb"):
                 let temporary = message['message']['object'];
                 temporary['id'] = message['message']['id'];
                 if (!this.object_draw.find(o => o.id === temporary.id)) {
                     this.object_draw.push(temporary);
                 }
                 break;
-            case ("modify-objects"):
+            case ("objectScalling"):
                 const objectUpdate = this.object_draw.find(o => o.id === message['message'].id);
                 update_dic(objectUpdate, message['message']);
                 break;
-            case ("clear-canvas"):
+            case ("clearCanvas"):
                 this.object_draw.length = 0;
                 break;
-            case ("remove-objects"):
+            case ("deleteObjects"):
                 this.object_draw = this.object_draw.filter((object) => {
                     return message['message'].id.indexOf(object.id) === -1;
                 });
@@ -51,7 +52,7 @@ class Room {
             case ("paste-objects"):
                 console.log(message['message']);
                 break;
-            case ("change-attribute"):
+            case ("changeAttribute"):
                 const objectChangeAttribute = this.object_draw.find(o => o.id === message['message'].id);
                 update_dic(objectChangeAttribute, message['message']);
                 break;
@@ -89,14 +90,16 @@ wsServer.on('connection', (ws, request) => {
     // send message to client when first connect
     ws.send(JSON.stringify({
         event: "connect",
-        object_existed: room.object_draw
+        message: room.object_draw
     }));
+    console.log("aaaaa");
     ws.on('message', (message) => {
         const msg = JSON.parse(message.toString('utf-8'));
         // handle message 
         room.handleMessage(msg);
         // send message to client.
         room.boardcastException(msg, ws);
+        console.log("room", room);
     });
     ws.on('close', () => {
         room.handleDeleteConnection(ws);
