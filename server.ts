@@ -2,7 +2,6 @@
 import { WebSocket } from "ws";
 
 const PORT : any =  process.env.PORT || 3000
-
 const wsServer = new WebSocket.Server({ port: PORT });
 
 const list_room: Array<any> = [];
@@ -15,9 +14,9 @@ function update_dic(a: any, b: any) {
 }
 
 interface Room {
-  room_id: string;
+  roomId: string;
   connections: Array<WebSocket>;
-  object_draw: Array<any>;
+  objectDraws: Array<any>;
 }
 
 interface message {
@@ -26,10 +25,10 @@ interface message {
 }
 
 class Room {
-  constructor(room_id: any) {
-    this.room_id = room_id;
+  constructor(roomId: any) {
+    this.roomId = roomId;
     this.connections = [];
-    this.object_draw = [];
+    this.objectDraws = [];
   }
 
   addConnection(connection: WebSocket) {
@@ -39,7 +38,7 @@ class Room {
   }
 
   addObject(object: object) {
-    return this.object_draw.push(object);
+    return this.objectDraws.push(object);
   }
 
   handleMessage(message: message) {
@@ -47,39 +46,65 @@ class Room {
       case "addObjectIntoDb":
         let temporary = message["message"]["object"];
         temporary["id"] = message["message"]["id"];
-        if (!this.object_draw.find((o) => o.id === temporary.id)) {
-          this.object_draw.push(temporary);
+        if (!this.objectDraws.find((o) => o.id === temporary.id)) {
+          this.objectDraws.push(temporary);
         }
         break;
       case "objectScalling":
-        const objectUpdate = this.object_draw.find(
+        const objectUpdate = this.objectDraws.find(
           (o) => o.id === message["message"]["option"].id
         );
         update_dic(objectUpdate, message["message"]["option"]);
+
         break;
       case "clearCanvas":
-        this.object_draw.length = 0;
+        this.objectDraws.length = 0;
         break;
       case "deleteObjects":
-        this.object_draw = this.object_draw.filter((object) => {
+        this.objectDraws = this.objectDraws.filter((object) => {
           return message["message"]["option"].id.indexOf(object.id) === -1;
         });
         break;
       case "changeAttribute":
-        const objectChangeAttribute = this.object_draw.find(
-          (o) => o.id === message["message"]["option"].id
-        );
-        update_dic(objectChangeAttribute, message["message"]["option"]);
+        const objectChangeAttribute = this.objectDraws.filter((object) => {
+          return message["message"].id.indexOf(object.id) !== -1;
+        });
+        objectChangeAttribute.forEach((o: any) => {
+          update_dic(o, message["message"]["option"]);
+        });
         break;
       case "textChange":
-        const objectChangingText = this.object_draw.find(
+        const objectChangingText = this.objectDraws.find(
           (o) => o.id === message["message"]["option"].id
         );
         update_dic(objectChangingText, message["message"]["option"]);
         break;
+      case "undoAction":
+        if (message["message"]["canvas"]) {
+          this.objectDraws.forEach((object) => {
+            const objectUpdated = message["message"]["canvas"]["objects"].find(
+              (o: any) => object.id === o.id
+            );
+            if (!objectUpdated) {
+              this.objectDraws.push(objectUpdated);
+            }
+            update_dic(object, objectUpdated);
+          });
+        }
+        break;
+      case "redoAction":
+        this.objectDraws.forEach((object) => {
+          const objectUpdated = message["message"]["canvas"]["objects"].find(
+            (o: any) => object.id === o.id
+          );
+          if (!objectUpdated) {
+            this.objectDraws.push(objectUpdated);
+          }
+          update_dic(object, objectUpdated);
+        });
+        break;
     }
   }
-
   boardcastException(msg: message, connection: WebSocket) {
     this.connections.forEach(function (client) {
       if (client !== connection && client.readyState === WebSocket.OPEN) {
@@ -100,8 +125,7 @@ class Room {
 
 wsServer.on("connection", (ws: WebSocket, request) => {
   // check room existed and create room and add connection
-  let room: Room = list_room.find((r) => r.room_id === request.url);
-
+  let room: Room = list_room.find((r) => r.roomId === request.url);
   if (!room) {
     room = new Room(request.url);
     list_room.push(room);
@@ -109,20 +133,20 @@ wsServer.on("connection", (ws: WebSocket, request) => {
   // If room existed add another connection
   room.addConnection(ws);
   // send message to client when first connect
-  ws.send(
-    JSON.stringify({
-      event: "connect",
-      message: room.object_draw,
-    })
-  );
-
+  if (ws.readyState === WebSocket.OPEN) {
+    ws.send(
+      JSON.stringify({
+        event: "connect",
+        message: room.objectDraws,
+      })
+    );
+  }
   ws.on("message", (message: Buffer) => {
     const msg = JSON.parse(message.toString("utf-8"));
     // handle message
     room.handleMessage(msg);
     // send message to client.
     room.boardcastException(msg, ws);
-    // console.log("room", room);
   });
   ws.on("close", () => {
     room.handleDeleteConnection(ws);
