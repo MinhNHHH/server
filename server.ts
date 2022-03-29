@@ -119,7 +119,9 @@ class Room {
   }
 
   handleDeleteConnection(connection: any) {
-    this.connections.splice(connection, 1);
+    this.connections = this.connections.filter((connection) => {
+      return connection.readyState !== 3
+    });
   }
 }
 
